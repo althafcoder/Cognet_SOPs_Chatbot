@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company RAG Chatbot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #e0f2fe;
+            --chat-bg: rgba(255, 255, 255, 0.85);
+            --sidebar-bg: rgba(255, 255, 255, 0.9);
+            --primary: #0284c7;
+            --primary-hover: #0369a1;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --glass-border: rgba(148, 163, 184, 0.3);
+            --user-bubble: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+            --bot-bubble: #f0f9ff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f8fafc 100%);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1200px;
+            height: 90vh;
+            display: flex;
+            gap: 20px;
+        }
+
+        /* Sidebar (Knowledge Base Manager) */
+        .sidebar {
+            width: 350px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            background: linear-gradient(to right, #0284c7, #0ea5e9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar-content {
+            padding: 20px;
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .sidebar-content::-webkit-scrollbar { width: 6px; }
+        .sidebar-content::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.4); border-radius: 10px; }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        select {
+            background: #f8fafc;
+            border: 1px solid var(--glass-border);
+            padding: 12px;
+            border-radius: 12px;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.95rem;
+            outline: none;
+            cursor: pointer;
+        }
+        select option {
+            background: #ffffff;
+            color: var(--text-main);
+        }
+
+        .sync-status {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-align: center;
+            min-height: 20px;
+            padding: 8px 0;
+        }
+
+        .sync-status.success {
+            color: #16a34a;
+        }
+
+        .sync-status.error {
+            color: #dc2626;
+        }
+
+        .sync-btn {
+            margin-top: auto;
+            padding: 16px;
+            background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .sync-btn:hover {
+            box-shadow: 0 10px 20px -5px rgba(2, 132, 199, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .sync-btn:disabled {
+            background: rgba(148, 163, 184, 0.2);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Chat Container */
+        .chat-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--chat-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        header {
+            padding: 20px 30px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.6);
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .scope-badge {
+            font-size: 0.85rem;
+            background: #e0f2fe;
+            color: #0369a1;
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(2, 132, 199, 0.3);
+            font-weight: 400;
+        }
+
+        .chat-window {
+            flex-grow: 1;
+            padding: 30px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .chat-window::-webkit-scrollbar { width: 6px; }
+        .chat-window::-webkit-scrollbar-track { background: transparent; }
+        .chat-window::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.4); border-radius: 10px; }
+
+        .message {
+            max-width: 80%;
+            padding: 16px 20px;
+            border-radius: 18px;
+            line-height: 1.5;
+            font-size: 0.95rem;
+            animation: fadeIn 0.4s ease forwards;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--user-bubble);
+            color: white;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.3);
+        }
+
+        .message.bot {
+            align-self: flex-start;
+            background: var(--bot-bubble);
+            border: 1px solid var(--glass-border);
+            border-bottom-left-radius: 4px;
+        }
+
+        .sources {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--glass-border);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        
+        .source-tag {
+            display: inline-block;
+            background: #e0f2fe;
+            padding: 3px 8px;
+            border-radius: 6px;
+            margin-right: 6px;
+            margin-bottom: 6px;
+            font-size: 0.75rem;
+            color: #0369a1;
+        }
+
+        .suggestions {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .suggestion-chip {
+            background: #e0f2fe;
+            border: 1px solid rgba(2, 132, 199, 0.3);
+            color: #0369a1;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-family: inherit;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+
+        .suggestion-chip:hover {
+            background: #bae6fd;
+            border-color: #0284c7;
+            transform: translateY(-1px);
+        }
+
+        .input-area {
+            padding: 20px 30px;
+            background: rgba(248, 250, 252, 0.8);
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            gap: 15px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            background: #f8fafc;
+            border: 1px solid var(--glass-border);
+            padding: 16px 20px;
+            border-radius: 16px;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            background: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+        }
+
+        .send-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0 24px;
+            border-radius: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .send-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(2, 132, 199, 0.4);
+        }
+
+        .loading {
+            align-self: flex-start;
+            display: none;
+            gap: 5px;
+            padding: 16px 20px;
+            background: var(--bot-bubble);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: #94a3b8;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Spinner for UI */
+        .spinner {
+            border: 2px solid rgba(148, 163, 184, 0.3);
+            border-top: 2px solid #0284c7;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: auto;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- Sidebar for Knowledge Base Manager -->
+        <div class="sidebar">
+            <div class="sidebar-header" style="text-align: center;">
+                <img src="/static/CogNet_logo_NEW-2025.png" alt="CogNet Logo" style="max-width: 100%; height: auto; max-height: 60px;">
+            </div>
+            <div class="sidebar-content">
+                <div class="form-group">
+                    <label for="clientSelect">Select Client</label>
+                    <select id="clientSelect">
+                        <option value="">Loading clients...</option>
+                    </select>
+                </div>
+
+                <div id="syncStatus" class="sync-status"></div>
+                <div id="sidebarLoader" class="spinner"></div>
+
+                <button id="syncBtn" class="sync-btn" disabled>Sync All Files</button>
+            </div>
+        </div>
+
+        <!-- Main Chat UI -->
+        <div class="chat-container">
+            <header>
+                <h1>SOPs Chatbot</h1>
+                <div class="scope-badge" id="scopeBadge">Scope: All Authorized Company Knowledge</div>
+            </header>
+
+            <div class="chat-window" id="chatWindow">
+                <div class="message bot">
+                    Hello! I am the Company RAG Assistant. Select a client on the left and click "Sync All Files" to index their documents. Once synced, you can ask me questions!
+                </div>
+                
+                <div class="loading" id="loadingIndicator">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <input type="text" id="userInput" placeholder="Ask a question or type a command..." autocomplete="off">
+                <button id="sendBtn" class="send-btn">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CHAT_API_URL = 'http://localhost:8000/api/chat';
+        const ONEDRIVE_API_URL = 'http://localhost:8000/api/onedrive';
+        const sessionId = 'session_' + Math.random().toString(36).substring(2, 10);
+        
+        // Chat Elements
+        const chatWindow = document.getElementById('chatWindow');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const scopeBadge = document.getElementById('scopeBadge');
+
+        // Sidebar Elements
+        const clientSelect = document.getElementById('clientSelect');
+        const syncBtn = document.getElementById('syncBtn');
+        const sidebarLoader = document.getElementById('sidebarLoader');
+        const syncStatus = document.getElementById('syncStatus');
+
+        // --- Sidebar Logic ---
+
+        async function fetchClients() {
+            try {
+                const res = await fetch(`${ONEDRIVE_API_URL}/clients`);
+                const data = await res.json();
+                clientSelect.innerHTML = '<option value="">-- Select Client --</option>';
+                data.clients.forEach(client => {
+                    const opt = document.createElement('option');
+                    opt.value = client;
+                    opt.textContent = client;
+                    clientSelect.appendChild(opt);
+                });
+            } catch (err) {
+                console.error("Failed to fetch clients", err);
+                clientSelect.innerHTML = '<option value="">Error loading clients</option>';
+            }
+        }
+
+        async function sendScopeCommand(command) {
+            try {
+                const response = await fetch(CHAT_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        message: command
+                    })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.current_scope) {
+                        scopeBadge.textContent = formatScope(data.current_scope);
+                    }
+                }
+            } catch (error) {
+                console.error('Error setting scope:', error);
+            }
+        }
+
+        clientSelect.addEventListener('change', (e) => {
+            const clientName = e.target.value;
+            syncBtn.disabled = !clientName;
+            syncStatus.textContent = '';
+            syncStatus.className = 'sync-status';
+            if (clientName) {
+                sendScopeCommand(`/client ${clientName}`);
+            } else {
+                sendScopeCommand('/clear');
+            }
+        });
+
+        function formatSyncSummary(data) {
+            if (data.status === 'error') {
+                return `Sync failed: ${data.message || 'Unknown error'}`;
+            }
+            const s = data.stats || {};
+            const indexed = s.indexed || 0;
+            const unchanged = s.unchanged || 0;
+            const errors = s.error || 0;
+
+            const parts = [];
+            if (indexed > 0) parts.push(`${indexed} new file(s) indexed`);
+            if (unchanged > 0) parts.push(`${unchanged} already synced`);
+            if (errors > 0) parts.push(`${errors} error(s)`);
+
+            if (parts.length === 0) parts.push('no files found');
+
+            return `Sync complete: ${parts.join(', ')}.`;
+        }
+
+        syncBtn.addEventListener('click', async () => {
+            const clientName = clientSelect.value;
+            if (!clientName) return;
+
+            syncBtn.disabled = true;
+            syncBtn.textContent = 'Syncing...';
+            syncStatus.textContent = 'Downloading and indexing files...';
+            syncStatus.className = 'sync-status';
+
+            try {
+                const res = await fetch(`${ONEDRIVE_API_URL}/sync_client`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ client_name: clientName })
+                });
+
+                if (!res.ok) {
+                    syncStatus.textContent = 'Failed to start sync.';
+                    syncStatus.className = 'sync-status error';
+                    return;
+                }
+
+                const data = await res.json();
+                const syncId = data.sync_id;
+                syncStatus.textContent = 'Syncing... Please wait.';
+                syncStatus.className = 'sync-status';
+
+                // Poll for completion
+                const startTime = Date.now();
+                const timeout = 15 * 60 * 1000;
+                let result = null;
+
+                while (Date.now() - startTime < timeout) {
+                    await new Promise(r => setTimeout(r, 4000));
+                    try {
+                        const statusRes = await fetch(`${ONEDRIVE_API_URL}/sync_status/${syncId}`);
+                        if (!statusRes.ok) {
+                            syncStatus.textContent = 'Sync status unavailable.';
+                            syncStatus.className = 'sync-status error';
+                            break;
+                        }
+                        const statusData = await statusRes.json();
+                        if (statusData.status === 'completed' || statusData.status === 'error') {
+                            result = statusData;
+                            break;
+                        }
+                    } catch (err) {
+                        console.error("Status poll error", err);
+                    }
+                }
+
+                if (result) {
+                    const summary = formatSyncSummary(result);
+                    syncStatus.textContent = summary;
+                    syncStatus.className = result.status === 'error' ? 'sync-status error' : 'sync-status success';
+                    appendMessage(summary, 'bot');
+                } else {
+                    syncStatus.textContent = 'Sync timed out. Check back later or re-sync.';
+                    syncStatus.className = 'sync-status error';
+                }
+            } catch (err) {
+                console.error("Sync error", err);
+                syncStatus.textContent = 'Error connecting to server.';
+                syncStatus.className = 'sync-status error';
+            } finally {
+                syncBtn.disabled = false;
+                syncBtn.textContent = 'Sync All Files';
+            }
+        });
+
+        // Fetch clients on load
+        fetchClients();
+
+        // --- Chat Logic ---
+
+        function formatScope(scopeObj) {
+            const parts = [];
+            if (scopeObj.client_id) parts.push(`Client=${scopeObj.client_id}`);
+            if (scopeObj.team_id) parts.push(`Team=${scopeObj.team_id}`);
+            if (scopeObj.benefit_id) parts.push(`Benefit=${scopeObj.benefit_id}`);
+            if (scopeObj.process_id) parts.push(`Process=${scopeObj.process_id}`);
+            
+            if (parts.length === 0) return "Scope: All Authorized Company Knowledge";
+            return "Scope: " + parts.join(" > ");
+        }
+
+        function appendMessage(text, sender, sources = [], suggestions = []) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message', sender);
+            
+            let formattedText = text.replace(/\n/g, '<br>');
+            msgDiv.innerHTML = formattedText;
+
+            if (sources && sources.length > 0) {
+                const sourcesDiv = document.createElement('div');
+                sourcesDiv.classList.add('sources');
+                sourcesDiv.innerHTML = '<strong>Sources:</strong><br>';
+                
+                sources.forEach(src => {
+                    const tag = document.createElement('span');
+                    tag.classList.add('source-tag');
+                    let tagText = `[${src.client || '?'}] [${src.document || '?'}]`;
+                    if(src.page) tagText += ` [Page ${src.page}]`;
+                    tag.textContent = tagText;
+                    sourcesDiv.appendChild(tag);
+                });
+                
+                msgDiv.appendChild(sourcesDiv);
+            }
+
+            if (sender === 'bot' && suggestions && suggestions.length > 0) {
+                const suggestDiv = document.createElement('div');
+                suggestDiv.classList.add('suggestions');
+                suggestions.forEach(s => {
+                    const chip = document.createElement('button');
+                    chip.classList.add('suggestion-chip');
+                    chip.textContent = s;
+                    chip.addEventListener('click', () => {
+                        userInput.value = s;
+                        sendMessage();
+                    });
+                    suggestDiv.appendChild(chip);
+                });
+                msgDiv.appendChild(suggestDiv);
+            }
+
+            chatWindow.insertBefore(msgDiv, loadingIndicator);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            appendMessage(text, 'user');
+            userInput.value = '';
+            
+            loadingIndicator.style.display = 'flex';
+            scrollToBottom();
+
+            try {
+                const response = await fetch(CHAT_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        message: text
+                    })
+                });
+
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                const data = await response.json();
+                
+                loadingIndicator.style.display = 'none';
+                appendMessage(data.answer, 'bot', data.sources, data.suggestions || []);
+                
+                if (data.current_scope) {
+                    scopeBadge.textContent = formatScope(data.current_scope);
+                }
+                
+            } catch (error) {
+                loadingIndicator.style.display = 'none';
+                appendMessage('Sorry, an error occurred while connecting to the server.', 'bot');
+                console.error('Error:', error);
+            }
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>

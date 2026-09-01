@@ -1,0 +1,39 @@
+# Python environments
+venv/
+env/
+.env
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Databases & Vector DBs
+rag_scope.db
+qdrant_db/
+
+# Temporary directories and logs
+temp_downloads/
+*.log
+ocr_debug.log
+out.txt
+temp_b64.txt
+
+# Test / Example Docs
+*.docx
+*.pdf
+!test.docx  # Comment this out if you actually want to track it
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
